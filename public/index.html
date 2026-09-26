@@ -37,6 +37,7 @@
     const codeInput = document.getElementById("codeInput");
     const deobfuscateBtn = document.getElementById("deobfuscateBtn");
     const output = document.getElementById("output").querySelector("code");
+    const outputPre = document.getElementById("output");
     const status = document.getElementById("status");
     const copyBtn = document.getElementById("copyBtn");
 
@@ -45,16 +46,20 @@
       if (!file) return;
       const text = await file.text();
       codeInput.value = text;
+      status.textContent = `File dimuat: ${file.name} (${text.length} bytes)`;
+      status.className = "";
     });
 
     deobfuscateBtn.addEventListener("click", async () => {
       const content = codeInput.value.trim();
       if (!content) {
         status.textContent = "Tidak ada input";
+        status.className = "err";
         return;
       }
 
       status.textContent = "Memproses...";
+      status.className = "loading";
       deobfuscateBtn.disabled = true;
       copyBtn.disabled = true;
 
@@ -70,14 +75,17 @@
         if (data.success) {
           output.textContent = data.decoded;
           status.textContent = `OK — ${data.type} | ${data.originalSize} → ${data.decodedSize} bytes`;
+          status.className = "ok";
           copyBtn.disabled = false;
         } else {
           output.textContent = `Error: ${data.error}`;
           status.textContent = "Gagal";
+          status.className = "err";
         }
       } catch (err) {
         output.textContent = `Network error: ${err.message}`;
         status.textContent = "Gagal";
+        status.className = "err";
       } finally {
         deobfuscateBtn.disabled = false;
       }
@@ -87,6 +95,27 @@
       navigator.clipboard.writeText(output.textContent);
       copyBtn.textContent = "Tersalin";
       setTimeout(() => copyBtn.textContent = "Copy Output", 1500);
+    });
+
+    // Drag & drop file ke textarea
+    codeInput.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      codeInput.style.borderColor = "var(--accent-dim)";
+    });
+
+    codeInput.addEventListener("dragleave", () => {
+      codeInput.style.borderColor = "";
+    });
+
+    codeInput.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      codeInput.style.borderColor = "";
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      const text = await file.text();
+      codeInput.value = text;
+      status.textContent = `File dimuat: ${file.name} (${text.length} bytes)`;
+      status.className = "";
     });
   </script>
 </body>
