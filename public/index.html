@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lua Monet Deobfuscator — GTA SAMP</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Lua Monet Deobfuscator</h1>
+    <p>GTA SAMP — flash.lua | vehkbl.lua | allgun_damage_de_spoof.lua</p>
+  </header>
+
+  <main>
+    <section class="input-section">
+      <label for="fileInput">Muat file .lua</label>
+      <input type="file" id="fileInput" accept=".lua">
+
+      <label for="codeInput">Atau paste kode obfuscated</label>
+      <textarea id="codeInput" rows="12" placeholder="Paste konten Lua obfuscated di sini..."></textarea>
+
+      <button id="deobfuscateBtn">Deobfuscate</button>
+    </section>
+
+    <section class="output-section">
+      <div class="output-header">
+        <span id="status">Idle</span>
+        <button id="copyBtn" disabled>Copy Output</button>
+      </div>
+      <pre id="output"><code>// hasil decode muncul di sini</code></pre>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const codeInput = document.getElementById("codeInput");
+    const deobfuscateBtn = document.getElementById("deobfuscateBtn");
+    const output = document.getElementById("output").querySelector("code");
+    const status = document.getElementById("status");
+    const copyBtn = document.getElementById("copyBtn");
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      codeInput.value = text;
+    });
+
+    deobfuscateBtn.addEventListener("click", async () => {
+      const content = codeInput.value.trim();
+      if (!content) {
+        status.textContent = "Tidak ada input";
+        return;
+      }
+
+      status.textContent = "Memproses...";
+      deobfuscateBtn.disabled = true;
+      copyBtn.disabled = true;
+
+      try {
+        const response = await fetch("/api/deobfuscate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          output.textContent = data.decoded;
+          status.textContent = `OK — ${data.type} | ${data.originalSize} → ${data.decodedSize} bytes`;
+          copyBtn.disabled = false;
+        } else {
+          output.textContent = `Error: ${data.error}`;
+          status.textContent = "Gagal";
+        }
+      } catch (err) {
+        output.textContent = `Network error: ${err.message}`;
+        status.textContent = "Gagal";
+      } finally {
+        deobfuscateBtn.disabled = false;
+      }
+    });
+
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(output.textContent);
+      copyBtn.textContent = "Tersalin";
+      setTimeout(() => copyBtn.textContent = "Copy Output", 1500);
+    });
+  </script>
+</body>
+</html>
