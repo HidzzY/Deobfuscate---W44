@@ -14,8 +14,9 @@ function detectObfuscationType(content) {
   if (content.includes("tonumber(___:sub") && content.includes("- 15")) {
     return "allgun";
   }
-  if (content.includes("local ______1 = 84") &&
-      content.includes("local ___")) {
+  // NoFuel family: key dinamis per file — cek struktur bukan nilai
+  if (/local\s+______1\s*=\s*\d+/.test(content) &&
+      /local\s+___\s*=\s*'\\\d{1,3}/.test(content)) {
     return "nofuel";
   }
   return "unknown";
