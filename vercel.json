@@ -1,23 +1,14 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/deobfuscate.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
+      "source": "/api/deobfuscate",
+      "destination": "/api/deobfuscate.js"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
+  "functions": {
+    "api/deobfuscate.js": {
+      "includeFiles": "lib/**"
     }
-  ]
+  }
 }
