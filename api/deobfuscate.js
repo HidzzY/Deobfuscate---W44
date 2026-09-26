@@ -14,9 +14,8 @@ function detectObfuscationType(content) {
   if (content.includes("tonumber(___:sub") && content.includes("- 15")) {
     return "allgun";
   }
-  // NoFuel signature: variabel ___ dengan byte string \NNN dan key 84
   if (content.includes("local ______1 = 84") &&
-      content.match(/local\s+___\s*=\s*'((?:\\\d{1,3})+)'/)) {
+      content.includes("local ___")) {
     return "nofuel";
   }
   return "unknown";
