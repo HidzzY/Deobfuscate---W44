@@ -1,0 +1,9 @@
+node_modules/
+.vercel
+.env*
+*.log
+.DS_Store
+tools/
+test/*.log
+test/*.txt
+test/*.luac

@@ -1,0 +1,10 @@
+const fs = require("fs");
+const { decodeFromContent, extractKeys } = require("../lib/espline-decoder");
+const content = fs.readFileSync("./test/tester.lua", "utf8");
+console.log("Keys:", JSON.stringify(extractKeys(content)));
+const out = decodeFromContent(content);
+console.log("Output length:", out.length);
+console.log("First 500:");
+console.log(out.slice(0, 500));
+console.log("---");
+console.log("Looks like Lua?", /function|local|return|end|samp/i.test(out));
