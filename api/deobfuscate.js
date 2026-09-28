@@ -57,11 +57,13 @@ function detectObfuscationType(content) {
     return "morgan_autojob";
   }
 
-  // spectator: payload __I_l + key _l1O00 + XOR _O_1_O_
-  if (/local\s+__I_l\s*=\s*'[A-Za-z0-9+/=]+'/.test(content) &&
-      content.includes("_O_1_O_") &&
-      /local\s+_l1O00\s*=\s*\d+/.test(content)) {
-    return "spectator";
+  // spectator family: payload base64 besar + _d64 + XOR rolling (spectator, autoflip, dll)
+  const hasBigB64 = /local\s+_[A-Za-z0-9_]+\s*=\s*'[A-Za-z0-9+/=]{1000,}'/.test(content);
+  const hasD64 = content.includes("_d64");
+  const hasXor = content.includes("_O_1_O_") || content.includes("_l0OOI_");
+
+  if (hasBigB64 && hasD64 && hasXor && !content.includes("_00_1")) {
+    return "spectator_family";
   }
 
   return "unknown";
@@ -108,7 +110,7 @@ module.exports = async (req, res) => {
     } else if (type === "morgan_autojob") {
       result = decodeMorganAutoJob(cleaned);
 
-    } else if (type === "spectator") {
+    } else if (type === "spectator_family") {
       result = decodeSpectator(cleaned);
 
     } else {
@@ -123,7 +125,7 @@ module.exports = async (req, res) => {
           "nofuel",
           "espline",
           "morgan_autojob",
-          "spectator"
+          "spectator_family"
         ]
       });
     }
