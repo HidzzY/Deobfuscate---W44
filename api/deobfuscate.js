@@ -7,37 +7,41 @@ const {
 const { extractAndDecode } = require("../lib/allgun-decoder");
 const { decodeNoFuel, stripPadding } = require("../lib/nofuel-decoder");
 const { decodeFromContent: decodeAimlock } = require("../lib/aimlock-decoder");
+const { decodeFromContent: decodeEspline } = require("../lib/espline-decoder");
 
 function detectObfuscationType(content) {
-  // flash: dua XOR key hardcoded 139/78
   if (content.includes("_vdu8aP8cGEvM5 = 139") &&
       content.includes("_vznLf99jPx0Z3 = 78")) {
     return "flash";
   }
 
-  // vehkbl family: alphabet custom + _k + _j
   const isVehkblFamily =
     content.includes('local _m = "!#$%&()*+,-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`{|}~"') &&
     /local\s+_k\s*=\s*\d+/.test(content) &&
     /local\s+_j\s*=\s*"/.test(content);
 
   if (isVehkblFamily) {
-    // aimlock varian: pakai getfenv + loadstring via string.char byte sequence
     const isAimlock =
       content.includes("type(getfenv)") ||
       content.includes("108,111,97,100,115,116,114,105,110,103");
     return isAimlock ? "aimlock" : "vehkbl";
   }
 
-  // allgun: hex string, subtract 15
   if (content.includes("tonumber(___:sub") && content.includes("- 15")) {
     return "allgun";
   }
 
-  // nofuel: key dinamis, byte string \NNN escapes
   if (/local\s+______1\s*=\s*\d+/.test(content) &&
       /local\s+___\s*=\s*'\\\d{1,3}/.test(content)) {
     return "nofuel";
+  }
+
+  // espline: _00_1 (base64 std) + _d64 + _llO1l_ + key 34
+  if (/local\s+_00_1\s*=\s*'[A-Za-z0-9+/=]+'/.test(content) &&
+      content.includes("_d64") &&
+      content.includes("_llO1l_") &&
+      /local\s+_1ll00\s*=\s*\d+/.test(content)) {
+    return "espline";
   }
 
   return "unknown";
@@ -78,11 +82,14 @@ module.exports = async (req, res) => {
     } else if (type === "nofuel") {
       result = decodeNoFuel(cleaned);
 
+    } else if (type === "espline") {
+      result = decodeEspline(cleaned);
+
     } else {
       return res.status(400).json({
         error: "Pola obfuscation tidak dikenal",
         detected: type,
-        supported: ["flash", "vehkbl", "aimlock", "allgun", "nofuel"]
+        supported: ["flash", "vehkbl", "aimlock", "allgun", "nofuel", "espline"]
       });
     }
 
