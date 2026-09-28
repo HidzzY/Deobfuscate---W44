@@ -8,13 +8,17 @@ const { extractAndDecode } = require("../lib/allgun-decoder");
 const { decodeNoFuel, stripPadding } = require("../lib/nofuel-decoder");
 const { decodeFromContent: decodeAimlock } = require("../lib/aimlock-decoder");
 const { decodeFromContent: decodeEspline } = require("../lib/espline-decoder");
+const { decodeMorganAutoJob } = require("../lib/morgan-autojob-decoder");
+const { decodeSpectator } = require("../lib/spectator-decoder");
 
 function detectObfuscationType(content) {
+  // flash: signature dua key hardcoded
   if (content.includes("_vdu8aP8cGEvM5 = 139") &&
       content.includes("_vznLf99jPx0Z3 = 78")) {
     return "flash";
   }
 
+  // vehkbl family: alphabet custom + _k + _j
   const isVehkblFamily =
     content.includes('local _m = "!#$%&()*+,-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`{|}~"') &&
     /local\s+_k\s*=\s*\d+/.test(content) &&
@@ -27,21 +31,37 @@ function detectObfuscationType(content) {
     return isAimlock ? "aimlock" : "vehkbl";
   }
 
+  // allgun: hex string + subtract 15
   if (content.includes("tonumber(___:sub") && content.includes("- 15")) {
     return "allgun";
   }
 
+  // nofuel: key dinamis + byte string \NNN
   if (/local\s+______1\s*=\s*\d+/.test(content) &&
       /local\s+___\s*=\s*'\\\d{1,3}/.test(content)) {
     return "nofuel";
   }
 
-  // espline: _00_1 (base64 std) + _d64 + _llO1l_ + key 34
+  // espline: _00_1 + _d64 + _llO1l_ + key _1ll00
   if (/local\s+_00_1\s*=\s*'[A-Za-z0-9+/=]+'/.test(content) &&
       content.includes("_d64") &&
       content.includes("_llO1l_") &&
       /local\s+_1ll00\s*=\s*\d+/.test(content)) {
     return "espline";
+  }
+
+  // morgan_autojob: byte string JzsXfvrF + key XZqFKBAc + rolling XOR
+  if (/local\s+JzsXfvrF\s*=\s*"/.test(content) &&
+      /local\s+XZqFKBAc\s*=\s*\d+/.test(content) &&
+      content.includes("JzsXfvrF:byte")) {
+    return "morgan_autojob";
+  }
+
+  // spectator: payload __I_l + key _l1O00 + XOR _O_1_O_
+  if (/local\s+__I_l\s*=\s*'[A-Za-z0-9+/=]+'/.test(content) &&
+      content.includes("_O_1_O_") &&
+      /local\s+_l1O00\s*=\s*\d+/.test(content)) {
+    return "spectator";
   }
 
   return "unknown";
@@ -85,11 +105,26 @@ module.exports = async (req, res) => {
     } else if (type === "espline") {
       result = decodeEspline(cleaned);
 
+    } else if (type === "morgan_autojob") {
+      result = decodeMorganAutoJob(cleaned);
+
+    } else if (type === "spectator") {
+      result = decodeSpectator(cleaned);
+
     } else {
       return res.status(400).json({
         error: "Pola obfuscation tidak dikenal",
         detected: type,
-        supported: ["flash", "vehkbl", "aimlock", "allgun", "nofuel", "espline"]
+        supported: [
+          "flash",
+          "vehkbl",
+          "aimlock",
+          "allgun",
+          "nofuel",
+          "espline",
+          "morgan_autojob",
+          "spectator"
+        ]
       });
     }
 
