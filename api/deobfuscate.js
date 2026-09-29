@@ -12,13 +12,11 @@ const { decodeMorganAutoJob } = require("../lib/morgan-autojob-decoder");
 const { decodeSpectator } = require("../lib/spectator-decoder");
 
 function detectObfuscationType(content) {
-  // flash: signature dua key hardcoded
   if (content.includes("_vdu8aP8cGEvM5 = 139") &&
       content.includes("_vznLf99jPx0Z3 = 78")) {
     return "flash";
   }
 
-  // vehkbl family: alphabet custom + _k + _j
   const isVehkblFamily =
     content.includes('local _m = "!#$%&()*+,-./0123456789:;<>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`{|}~"') &&
     /local\s+_k\s*=\s*\d+/.test(content) &&
@@ -31,18 +29,15 @@ function detectObfuscationType(content) {
     return isAimlock ? "aimlock" : "vehkbl";
   }
 
-  // allgun: hex string + subtract 15
   if (content.includes("tonumber(___:sub") && content.includes("- 15")) {
     return "allgun";
   }
 
-  // nofuel: key dinamis + byte string \NNN
   if (/local\s+______1\s*=\s*\d+/.test(content) &&
       /local\s+___\s*=\s*'\\\d{1,3}/.test(content)) {
     return "nofuel";
   }
 
-  // espline: _00_1 + _d64 + _llO1l_ + key _1ll00
   if (/local\s+_00_1\s*=\s*'[A-Za-z0-9+/=]+'/.test(content) &&
       content.includes("_d64") &&
       content.includes("_llO1l_") &&
@@ -50,14 +45,14 @@ function detectObfuscationType(content) {
     return "espline";
   }
 
-  // morgan_autojob: byte string JzsXfvrF + key XZqFKBAc + rolling XOR
-  if (/local\s+JzsXfvrF\s*=\s*"/.test(content) &&
-      /local\s+XZqFKBAc\s*=\s*\d+/.test(content) &&
-      content.includes("JzsXfvrF:byte")) {
+  const hasByteString = /local\s+[A-Za-z0-9_]+\s*=\s*"((?:\\\d{1,3}){500,})"/.test(content);
+  const hasChecksum = content.includes("% 65535") && content.includes("~=");
+  const hasRollingXor = content.includes("* 31 + i") && content.includes("% 256");
+
+  if (hasByteString && hasChecksum && hasRollingXor) {
     return "morgan_autojob";
   }
 
-  // spectator family: payload base64 besar + _d64 + XOR rolling (spectator, autoflip, dll)
   const hasBigB64 = /local\s+_[A-Za-z0-9_]+\s*=\s*'[A-Za-z0-9+/=]{1000,}'/.test(content);
   const hasD64 = content.includes("_d64");
   const hasXor = content.includes("_O_1_O_") || content.includes("_l0OOI_");
