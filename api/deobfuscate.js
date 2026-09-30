@@ -10,6 +10,7 @@ const { decodeFromContent: decodeAimlock } = require("../lib/aimlock-decoder");
 const { decodeFromContent: decodeEspline } = require("../lib/espline-decoder");
 const { decodeMorganAutoJob } = require("../lib/morgan-autojob-decoder");
 const { decodeSpectator } = require("../lib/spectator-decoder");
+const { decodeMorganKalcer } = require("../lib/morgan-kalcer-decoder");
 
 function detectObfuscationType(content) {
   if (content.includes("_vdu8aP8cGEvM5 = 139") &&
@@ -51,6 +52,13 @@ function detectObfuscationType(content) {
 
   if (hasByteString && hasChecksum && hasRollingXor) {
     return "morgan_autojob";
+  }
+
+  // morgan_kalcer: _MORGAN_VM + _DATA + affine cipher * 13 + 7
+  if (content.includes("_MORGAN_VM") &&
+      content.includes("_DATA") &&
+      content.includes("* 13 + 7")) {
+    return "morgan_kalcer";
   }
 
   const hasBigB64 = /local\s+_[A-Za-z0-9_]+\s*=\s*'[A-Za-z0-9+/=]{1000,}'/.test(content);
@@ -105,6 +113,9 @@ module.exports = async (req, res) => {
     } else if (type === "morgan_autojob") {
       result = decodeMorganAutoJob(cleaned);
 
+    } else if (type === "morgan_kalcer") {
+      result = decodeMorganKalcer(cleaned);
+
     } else if (type === "spectator_family") {
       result = decodeSpectator(cleaned);
 
@@ -120,6 +131,7 @@ module.exports = async (req, res) => {
           "nofuel",
           "espline",
           "morgan_autojob",
+          "morgan_kalcer",
           "spectator_family"
         ]
       });
